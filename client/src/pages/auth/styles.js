@@ -28,6 +28,13 @@ export default makeStyles((theme)=>({
     },
     googleButton:{
         marginBottom: theme.spacing(2)
+    }, 
+    errorAlert:{
+        color: theme.palette.secondary.main,
+        fontSize: '12px',
+        marginLeft: theme.spacing(1),
+        marginBottom: theme.spacing(1)
+        
     }
 
 }))

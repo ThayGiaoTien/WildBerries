@@ -1,44 +1,75 @@
+import React, {useState} from 'react';
+import useStyles from './styles'
+
 import { Container, Typography, Grid, Paper, Button, Avatar } from '@material-ui/core';
 import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import GoogleLogin from 'react-google-login';
 import Input from '../auth/Input'
 import Icon from './Icon'
-import React, {useState} from 'react';
-import useStyles from './styles'
+import ErrorInput from './ErrorInput';
 
-
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {useHistory} from 'react-router-dom'; //change direct immediately
+
+import {login} from '../../redux/actions/authAction'
+import {register} from '../../redux/actions/authAction'
+import { GLOBAL_TYPES } from '../../redux/actions/globalTypes';
 
 
 const initialState={
     name:'', email:'', password: '', address:'', telephone_number:''
 }
 const Auth=()=>{
-    // const dispatch= useDispatch()
-    // const history=useHistory()
+    const dispatch= useDispatch()
+    const history=useHistory()
     const classes= useStyles()
 
     const [isSignup, setIsSignup]= useState(false)
     const [formData, setFormData]= useState(initialState)
     const [showPassword, setShowPassword]= useState(false)
 
+    const {alert}= useSelector(state=>state)
+    
+
     const handleChangeInput=e=>{
-        setFormData({...formData, [e.target.name]: e.target.value})
+        const {name, value}= e.target
+        setFormData({...formData, [name]: value})
+        
     }
 
     const handleSubmit=e=>{
         e.preventDefault()
+        console.log(formData)
+        if(isSignup){
+            dispatch(register(formData, history))
+        } else{
+            dispatch(login(formData, history))
+        }
+        //history.push('/') we send history to action to make sure that login/register successful
 
     }
     const handleShowPassword=()=>{
         setShowPassword(prevShowPassword=>!prevShowPassword)
     }
-    const googleSuccess=()=>{
-
+    const googleSuccess=async(res)=>{
+        const result= res?.profileObj;
+        const token= res?.tokenId
+        console.log(token, result)
+        try{
+            dispatch({type: GLOBAL_TYPES.AUTH, payload: {result, token}})
+            history.push('/')
+        } catch(err){
+            dispatch({type: GLOBAL_TYPES.ALERT, payload:{error: err.response.data.msg}})
+        }
     }
-    const googleFailure=()=>{
 
+    const googleFailure=(err)=>{
+        dispatch({type: GLOBAL_TYPES.ALERT, 
+            payload: {
+                err, 
+                msg: "Google sign in was unsuccessful! Try again."
+            }    
+        })
     }
     const switchMode=()=>{
         setIsSignup(prevIsSignup=>!prevIsSignup)
@@ -60,15 +91,28 @@ const Auth=()=>{
                         {
                             isSignup && (
                                 <>
-                                    <Input name='name' label='Username' onChange={handleChangeInput} autoFocus />
+                                    <Input name='name' label='Username' handleChangeInput={handleChangeInput} autoFocus color={alert.name?'secondary':'primary'}/>
+                                    {alert.name? <ErrorInput alert={alert.name}/> : ''}
                                 </>
                             )
                         }
-                        <Input name='email' label='Email' onChange={handleChangeInput} type='email'  />
-                        <Input name='password' label='Password' handleChange={handleChangeInput} type={showPassword ? 'text': 'password'} handleShowPassword={handleShowPassword}/>
+                        <Input name='email' label='Email' handleChangeInput={handleChangeInput} type='email' color={alert.email?'secondary':'primary'} />
+                            {alert.email ? <ErrorInput alert={alert.email}/> : ''}
+                        <Input name='password' label='Password' handleChangeInput={handleChangeInput} type={showPassword ? 'text': 'password'} handleShowPassword={handleShowPassword}
+                        color={alert.password?'secondary':'primary'}
+                        />
+                            {alert.password ? <ErrorInput alert={alert.password}/> : ''}
                         {
                             isSignup && (
-                                <Input name='confirmPassword' label='Repeat your password' onChange={handleChangeInput} type={showPassword ? 'text': 'password'} handleShowPassword={handleShowPassword}/>
+                                <>
+                                    <Input name='confirmPassword' label='Repeat your password' handleChangeInput={handleChangeInput} type={showPassword ? 'text': 'password'} 
+                                    handleShowPassword={handleShowPassword}
+                                    color={alert.cf_password?'secondary':'primary'}
+                                    />
+                                    {alert.cf_password ? <ErrorInput alert={alert.cf_password}/> : ''}
+                                </>
+                                
+                                
                             )
                         }    
                     </Grid>

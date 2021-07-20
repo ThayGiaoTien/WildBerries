@@ -24,16 +24,16 @@ const userCtrl= {
             
             res.cookie("refresh_token", refresh_token,{
                 httpOnly: true,
-                path: '/user/refresh_token',
+                path: '/api/refresh_token',
                 maxAge: 7*24*60*60*1000 // 7days
             })
 
-            res.json({access_token, msg: "Registered successful!"})
+            res.json({access_token, newUser, msg: "Registered successful!"})
 
         }catch(err){
-            if(err){
-                return res.status(500).json({msg: err.message})
-            }
+            
+            return res.status(500).json({msg: err.message})
+        
         }
         
 
@@ -53,20 +53,23 @@ const userCtrl= {
             const refresh_token= createRefreshToken({id: thisUser._id})
             res.cookie("refresh_token", refresh_token,{
                 httpOnly: true,
-                path: '/user/refresh_token',
+                path: '/api/refresh_token',
                 maxAge: 7*24*60*60*1000 // 7days
             })
 
-            res.json({access_token, refresh_token, msg: "Logged in successful!"})
+            res.json({access_token, thisUser, msg: "Logged in successful!"})
 
         }catch(err){
+            
             return res.status(500).json({msg: err.message})
+            
+            
         }
     },
 
     logout: async(req, res)=>{
         try{
-            res.clearCookie('refresh_token', {path: 'user/refresh_token'})
+            res.clearCookie('refresh_token', {path: 'api/refresh_token'})
             res.json({msg: "Logged out!"})
         }catch(err){
             return res.status(500).json({msg: err.message})
@@ -77,12 +80,16 @@ const userCtrl= {
         try{
             const rf_token= req.cookies.refresh_token;
             if(!rf_token) return res.status(400).json({msg: "Please register or log in!"})
+    
 
             // Verify to get user._id and create new access_token
-            jwt.verify(rf_token, process.env.REFRESH_TOKEN_SECRET, (err, user)=>{
+            jwt.verify(rf_token, process.env.REFRESH_TOKEN_SECRET, async(err, result)=>{
                 if(err) return res.status(400).json({msg: "Invalid authentication"})
-                const access_token= createAccessToken({id: user._id} )
-                res.json(access_token)
+                const user= await await Users.findById(result.id).select('-password')
+                if(!user) return res.status(400).json("This user dose not exists.")
+
+                const access_token= createAccessToken({id: result.id} )
+                res.json({user, access_token})    // i forgot {}
             })
         }catch(err){
             return res.status(500).json({msg: err.message})
